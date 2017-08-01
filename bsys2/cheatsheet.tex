@@ -6,7 +6,7 @@
 \usepackage{minted}
 \usepackage{graphicx}
 \usepackage[binary-units]{siunitx}
-
+\usepackage[usenames]{xcolor}
 
 \geometry{top=1cm,left=1.5cm,right=1cm,bottom=1cm}
 
@@ -72,8 +72,6 @@
     gebraucht wird, vermutlich auch demnächst
   \item[Lokalität (Raum)] lokale Variablen sind in der Nähe im RAM: Wenn
     \verb|a| gebraucht wird, dann vermutlich auch \verb|a + 1|, $\ldots$
-  \item[Rechnen mit Zweierpotenzen] $1 = 2^0, \ldots 512 = 2^9$; $\si{\kilo\byte} = 2^{10}, \si{\mega\byte}
-    = 2^{20}, \si{\giga\byte} = 2^{30}, \ldots$ $\Rightarrow$ $\SI{32}{\kilo\byte} = 2^{15}$
 \end{description}
 
 
@@ -477,13 +475,11 @@ LRESULT WndProc(....) { ... }
 
 \begin{description}
   \item[UTF-32] Ein Codepoint als 4 byte direkt (big/little endian)
-  \item[UTF-8] Superset von ASCII, Prefix wie \verb|110| im ersten Byte sagt,
-    wie viele Bytes es sind (2-4) bei non-ASCII. Keine Endianness.
-  \item[UTF-16] LE/BE, 2 byte. Zeichen > 0xFFFF werden als surrogate escape codiert, mit
-    \verb|0xD800| bzw. \verb|0xDC00| als Prefix (\verb|0xD800..DFFF| sind
-    invalide code points).
+  \item[UTF-8] Superset von ASCII. Keine Endianness.
+  \item[UTF-16] LE/BE, 2 byte.
   \item[Windows] Intern UTF-16, diverse API die doppelt als \verb|A| und
     \verb|W| Variante existiert.
+  \item[Code Unit] 8/16/32-bit unit in UTF-8/16/32
 \end{description}
 
 \subsection{X}
@@ -686,6 +682,73 @@ Objekt-Dateien verwendet werden.
     ABI-kompatibel sein sollte)
   \item[real name] libz.so.1.2.11
 \end{description}
+
+\section{utils.c}
+
+\subsection{Zweierpotenzen / binary}
+
+\begin{tabular}{ll|ll}
+  $2^0$    & 1      & 0 & 0000 \\
+  $2^1$    & 2      & 1 & 0001 \\
+  $2^2$    & 4      & 2 & 0010 \\
+  $2^3$    & 8      & 3 & 0011 \\
+  $2^4$    & 16     & 4 & 0100 \\
+  $2^5$    & 32     & 5 & 0101 \\
+  $2^6$    & 64     & 6 & 0110 \\
+  $2^7$    & 128    & 7 & 0111 \\
+  $2^8$    & 256    & 8 & 1000 \\
+  $2^9$    & 512    & 9 & 1001 \\
+  $2^{10}$ & 1024   & A & 1010 \\
+  $2^{11}$ & 2048   & B & 1011 \\
+  $2^{12}$ & 4096   & C & 1100 \\
+  $2^{13}$ & 8192   & D & 1101 \\
+  $2^{14}$ & 16386  & E & 1110 \\
+  $2^{15}$ & 32768  & F & 1111 \\
+  $2^{16}$ & 65536  & & \\[1em]
+  $2^{10}$ & kB     & & \\
+  $2^{20}$ & MB     & & \\
+  $2^{30}$ & GB
+\end{tabular}
+
+$\Rightarrow \SI{32}{\kilo\byte} = 2^{5} \cdot 2^{10} = 2^{15}$
+
+\subsection{UTF-8}
+
+\begin{tabular}{llllll}
+  First & Last & 1 & 2 & 3 & 4 \\
+  \hline
+  U+0000 & U+007F & 0xxxxxxx & & & \\
+  U+0080 & U+07FF & 110xxxxx & 10xxxxxx & & \\
+  U+0800 & U+FFFF & 1110xxxx & 10xxxxxx & 10xxxxxxx & \\
+  U+10000 & U+10FFFF & 11110xxx & 10xxxxxx & 10xxxxxxx & 10xxxxxx \\
+\end{tabular}
+
+\subsubsection{Beispiel}
+
+U+20AC ist \textcolor{blue}{0010} \textcolor{brown}{0000 10}\textcolor{red}{10 1100}
+
+Encodiert: \textbf{1110} \textcolor{blue}{0010} \textbf{10}\textcolor{brown}{00 0010} \textbf{10}\textcolor{red}{10 1100}
+
+
+\subsection{UTF-16}
+
+\begin{description}
+  \item[U+0000 - U+D7FF] Direkt in 16-bit.
+  \item[U+D800 - U+DFFF] Reserved (surrogates)
+  \item[U+E000 - U+FFFF] Direkt in 16-bit.
+  \item[U+10000 - U+10FFFF] Als surrogate: \\
+    \verb|0x10000| abziehen, in 10 high/low bits aufteilen. \\
+    High value: $\verb|0xD800| + b_{19}\ldots{}b_{10}$ (\verb|1101 10|) \\
+    Low value: $\verb|0xDC00| + b_{9}\ldots{}b_{0}$ (\verb|1101 11|)
+\end{description}
+
+\vspace{2em}
+
+Surrogate-Beispiel: U+10437	ist \textcolor{blue}{0001 0000 01}\textcolor{brown}{00 0011 0111} \\
+Daraus wird \textbf{1101 10}\textcolor{blue}{00 0000 0001} \textbf{1101 11}\textcolor{brown}{00 0011 0111} \\
+Als code units: \textcolor{blue}{D801} \textcolor{brown}{DC37} \\
+UTF16-BE: \textcolor{blue}{D8 01} \textcolor{brown}{DC 37} \\
+UTF16-LE: \textcolor{blue}{01 D8} \textcolor{brown}{37 DC}
 
 \end{multicols*}
 \end{document}
