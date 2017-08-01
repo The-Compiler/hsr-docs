@@ -240,15 +240,14 @@ Bei ungültigem Zugriff signalisiert die MMU einen Fault Interrupt zum OS.
 Bei Swapping lädt das OS die Page von Sekundärspeicher ins RAM und
 passt mapping table an (MMU kennt nur RAM!).
 
-Speicher basiert auf \emph{pages}, die meist \SI{4}{\kilo\byte} gross sind
-($\rightarrow$ 12 offset bits). Hauptspeicher wird in \emph{page frames}
+Speicher basiert auf \emph{pages}, die meist \SI{4}{\kilo\byte} gross sind.
+Hauptspeicher wird in \emph{page frames}
 unterteilt. Bei einer Addresse wie \verb|0xAB 78 9C CC| ist dann \verb|0xAB789|
 die page frame number, und \verb|CCC| (12 LSB) der Offset.
 
 \subsection{Page Tables}
 
 Die MMU muss wissen, ob eine page gültig ist, und in welchem page frame sie ist.
-
 Das OS muss wissen, wo die page ist (Haupt-/Sekundärspeicher), ob sie verwendet
 wird, und ob sie seit dem letzten Einlagern verwendet wurde.
 
@@ -262,8 +261,10 @@ Wenn Prozess auf \verb|0x8765431| zugreift, ermittelt die MMU die page number
 Addresse ist also \verb|0xABCD0321|. Wird sehr schnell gross, Beispiel:
 
 \begin{itemize}
-  \item \SI{4}{\kilo\byte} page size ($2^{12} \si{\byte}$)
-  \item \SI{4}{\giga\byte} RAM ($2^{32} \si{\byte}$) $\rightarrow 2^{20}$ (1M) page frames $\rightarrow \SI{20}{\bit}$ page nr
+  \item \SI{4}{\kilo\byte} page size ($2^{12} \si{\byte}$); 32-bit Addressen \\
+    $\rightarrow log_2({\SI{4}{\kilo\byte}}) = 12$ bits Offset
+  \item \SI{4}{\giga\byte} RAM ($2^{32} \si{\byte}) / \SI{4}{\kilo\byte} =
+    2^{20}$ (1M) page frames \\ $\rightarrow \SI{20}{\bit}$ page nr
   \item \SI{4}{\giga\byte} virtueller Speicher $\rightarrow 1M$ Einträge
   \item \SI{32}{\bit} pro Eintrag (page nr + statusbits)
   \item Page table ist \SI{4}{\mega\byte} pro Prozess!
@@ -291,6 +292,8 @@ Beispiel:
   \item MMU schaut in SLPT an Index \verb|0x254|, kriegt frame number \verb|0xABCD0|
   \item Reale Addresse: \verb|0xABCD0321|
 \end{itemize}
+
+Mit $2^{10}$ Einträgen pro Page haben wir so $2^{20}$ Pages pro Prozess!
 
 \subsection{IPC}
 
@@ -382,8 +385,10 @@ ersetzt (zurückschreiben nicht nötig).
   Diese Adressen können aber nicht für RAM benutzt werden. Einfach
 \item[Port mapped] Eigener IO Bus und Addressraum. CPU braucht zusätzliche Logik
   (und Instruktionen), System braucht zusätzlichen Bus.
-\item[Port mapped via Speicherbus] RAM-Bus hat zusätzliches selector bit, CPU
-  hat I/O-Instruktionen. Wie Port mapped, aber Systemdesign ist einfacher.
+  \begin{description}
+    \item[via Speicherbus] RAM-Bus hat zusätzliches selector bit, CPU
+      hat I/O-Instruktionen. Wie Port mapped, aber Systemdesign ist einfacher.
+  \end{description}
 \item[Polling] Normalerweise schlecht, aber (bei schnelleren Geräten) bessere
   (und deterministischere) Performance.
 \item[Interrupt Controller] Hängt an allen Devices die einen Interrupt senden
@@ -414,6 +419,7 @@ ersetzt (zurückschreiben nicht nötig).
 
 \begin{description}
   \item[Baumstruktur] Bildschirm ist das root window, Fenster haben Unterfenster (widgets).
+  \item[Fenster] Rechteckiger Bereich des Bildschirms
 \end{description}
 
 \subsubsection{Windows}
@@ -493,6 +499,7 @@ LRESULT WndProc(....) { ... }
     damit den passenden Union-Member.
   \item[Fehlerbehandlung] Rückgabewerte, \verb|XSetErrorHandler()| (Protokoll),
     \verb|XSetIOErrorHandler| (fatal)
+  \item[Display] Rechner mit Tastatur/Pointing device/screen
 \end{description}
 
 \begin{minted}{c}
@@ -522,7 +529,7 @@ while (true) {
   \item[Bootsektor] Enthält Sektorengrösse, Anzahl Sektoren pro Cluster, Anzahl
     FATs und Grösse, Volumegrösse, Label, etc.
   \item[Cluster] Fässt Sektoren von Dateien zusammen.
-  \item[FAT] Enthält Eintrag pro Cluster (erster Cluster einer Datei). Der
+  \item[FAT] Enthält Clusterketten-Eintrag pro Cluster (erster Cluster einer Datei). Der
     Eintrag zu diesem Cluster hat dann die Addresse des nächsten Clusters (oder
     Ende-Zeichen). Es gibt ein Backup.
   \item[Verzeichnis] Eintrag der auf weitere Directory/File Entries zeigt.
@@ -657,7 +664,8 @@ implementiert - sie sucht die Funktion und überschreibt GOT-Eintrag.
 void *lib = dlopen("libfoo.so", RTLD_LAZY);
 // handle lib == NULL, e.g. with dlerror()
 typedef char *(*GetMessage)(void);
-GetMessage get_message = (GetMessage)dlsym(lib, "get_message");
+GetMessage get_message =
+   (GetMessage)dlsym(lib, "get_message");
 // handle get_message == NULL
 get_message();
 int fail = dlclose(lib);
