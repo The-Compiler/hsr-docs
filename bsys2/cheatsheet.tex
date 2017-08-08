@@ -750,5 +750,33 @@ Als code units: \textcolor{blue}{D801} \textcolor{brown}{DC37} \\
 UTF16-BE: \textcolor{blue}{D8 01} \textcolor{brown}{DC 37} \\
 UTF16-LE: \textcolor{blue}{01 D8} \textcolor{brown}{37 DC}
 
+\subsection{Filesystem API}
+
+\subsubsection{POSIX API}
+
+\verb|open(path, flags) -> fd|,
+\verb|close(fd) -> status|, \\
+\verb|read/write(fd, buffer, n) -> status|, \\
+\verb|pread| und \verb|pwrite| mit Offset als Argument \\
+\verb|lseek(fd, offset, whence) -> status|,
+
+\subsubsection{C API}
+
+\verb|fdopen(fd, char *mode) -> FILE| \\
+\verb|fopen(path, mode) -> FILE| \\
+\verb|fileno(FILE *stream) -> fd| \\
+\verb|fflush/fclose(stream) -> status| \\
+\verb|feof/ferror(stream) -> int| (bool-ish) \\
+\verb|fgetc(stream) -> int| \\
+\verb|fgets(char *outs, n, stream) -> int| \\
+\verb|fputs(int c, stream) -> status| \\
+\verb|fputc(text, stream) -> status| \\
+\verb|fungetc(c, stream) -> status| \\
+\verb|ftell(stream) -> offset| \\
+\verb|fseek(stream, offset, whence) -> status| \\
+\verb|rewind(stream)|: \verb|fseek(stream, 0, SEEK_SET)|, clear errno
+
+
+
 \end{multicols*}
 \end{document}
