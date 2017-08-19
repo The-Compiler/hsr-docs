@@ -113,8 +113,8 @@ Wir haben $k$ direct mapped caches, d.h. wir können pro way/set-Paar ein Entry 
   \item z.B. \SI{32}{\kilo\byte} cache, 4-way; $l = \SI{64}{\byte}$ (Cachezeilenlänge)
   \item Cachezeilen $z = \SI{32}{\kilo\byte} / \SI{64}{\byte} = 2^{15} / 2^6 =
     2^9 = 512$ \\ ($\rightarrow$ pro way: $z' = 128$)
-  \item Offset (Spalte) braucht $log_2{(l)}$ ($\rightarrow$ 6)
-  \item Set (Zeile) braucht $log_2(z')$ ($\rightarrow$ 7)
+  \item Offset (Spalte) braucht $\log_2{(l)}$ ($\rightarrow$ 6)
+  \item Set (Zeile) braucht $\log_2(z')$ ($\rightarrow$ 7)
   \item Tag braucht den Rest, bei Adressbreite von 64bit z.B. \\ $64 - 6 - 7 = 51$
 \end{itemize}
 
@@ -175,8 +175,9 @@ jeweils $2^k$. Blöcke werden in Zweiergruppen geteilt:
 [   ][8f][      ] (n=4)     00000, 01000  / 10000, 11000
 [][][   ][      ] (n=3)     00000, 00100  / 01000, 01100 / …
 4!4f  (4 used, 4 free)      ^- buddies -^ (nur bit n anders)
-\end{verbatim}
 
+buddies = a ^ b == 1 << level;
+\end{verbatim}
 Reservation: Suche passenden Block (angeforderte Grösse auf $2^k$ aufgerundet).
 Falls nicht vorhanden: Finde nächstgrösseren Block und zerteile ihn.
 
@@ -227,21 +228,16 @@ aber Schutz vor Überläufen.
     relative Addressen).
   \item[Translation Lookaside Buffer] Speichert häufig genutzte page mappings (Lokalität)
   \item[Memory mapped file] Echte Datei statt swap-file via RAM
-\end{description}
-
-\subsubsection{Grundlagen}
-
-MMU RAM und CPU/Prozess. Das OS konfiguriert
-die MMU, der Prozess kennt nur virtuellen Addressen von der MMU.
-
-Bei ungültigem Zugriff signalisiert die MMU einen Fault Interrupt zum OS.
-Bei Swapping lädt das OS die Page von Sekundärspeicher ins RAM und
-passt mapping table an (MMU kennt nur RAM!).
-
-Speicher basiert auf \emph{pages}, die meist \SI{4}{\kilo\byte} gross sind.
-Hauptspeicher wird in \emph{page frames}
-unterteilt. Bei einer Addresse wie \verb|0xAB 78 9C CC| ist dann \verb|0xAB789|
+  \item[Virtueller Speicher]  OS konfiguriert MMU, Prozess kennt nur virtuelle MMU-Addressen.
+  \item[Ungültiger Zugriff] MMU signalisiert Fault Interrupt zum OS.
+  \item[Swapping] OS lädt Page von Sekundärspeicher ins RAM und passt mapping
+    table an (MMU kennt nur RAM!).
+  \item[Pages] Virtueller Speicher basiert auf \emph{pages} (meist \SI{4}{\kilo\byte})
+  \item[Page Frames] Hauptspeicher wird in \emph{page frames}
+unterteilt (jeder Prozess braucht $\geq$ 1 page frame). Bei einer Addresse wie
+\verb|0xAB 78 9C CC| ist dann \verb|0xAB789|
 die page frame number, und \verb|CCC| (12 LSB) der Offset.
+\end{description}
 
 \subsection{Page Tables}
 
@@ -251,7 +247,7 @@ wird, und ob sie seit dem letzten Einlagern verwendet wurde.
 
 \subsubsection{Single level}
 
-Array mit \verb|(page_num, status_bits)| für jede page, mit page number als
+Array mit \verb|(frame_num, status_bits)| für jede page, mit page number als
 index.
 
 Wenn Prozess auf \verb|0x8765431| zugreift, ermittelt die MMU die page number
@@ -260,10 +256,11 @@ Addresse ist also \verb|0xABCD0321|. Wird sehr schnell gross, Beispiel:
 
 \begin{itemize}
   \item \SI{4}{\kilo\byte} page size ($2^{12} \si{\byte}$); 32-bit Addressen \\
-    $\rightarrow log_2({\SI{4}{\kilo\byte}}) = 12$ bits Offset
+    $\rightarrow \log_2({\SI{4}{\kilo\byte}}) = 12$ bits Offset, 32 - 12 = 20
+    bit page number
   \item \SI{4}{\giga\byte} RAM ($2^{32} \si{\byte}) / \SI{4}{\kilo\byte} =
-    2^{20}$ (1M) page frames \\ $\rightarrow \SI{20}{\bit}$ page nr
-  \item \SI{4}{\giga\byte} virtueller Speicher $\rightarrow 1M$ Einträge
+    2^{20}$ (1M) page frames \\ $\rightarrow \SI{20}{\bit}$ frame number
+  \item \SI{4}{\giga\byte} virtueller Speicher $\rightarrow$ 1M Einträge
   \item \SI{32}{\bit} pro Eintrag (page nr + statusbits)
   \item Page table ist \SI{4}{\mega\byte} pro Prozess!
 \end{itemize}
@@ -296,9 +293,9 @@ Mit $2^{10}$ Einträgen pro Page haben wir so $2^{20}$ Pages pro Prozess!
 \subsection{IPC}
 
 \begin{description}
-\item[Shared memory] Prozesse teilen sich Speicher. Verschiedene Page Frames (in den
-zwei Prozessen) zeigen auf gleiche Page.
-\item[Message passing] OS kopiert daten zwischen zwei unabhängigen pages/frames. Mehr
+\item[Shared memory] Prozesse teilen sich Speicher. Verschiedene Pages  (in den
+zwei Prozessen) für denselben Page Frame.
+\item[Message passing] OS kopiert Daten zwischen zwei unabhängigen pages/frames. Mehr
 Isolation, aber Overhead.
 \end{description}
 
@@ -358,14 +355,15 @@ ersetzt (zurückschreiben nicht nötig).
   \item[FIFO] Braucht keine Status bits, ersetze älteste Seite nach Ladezeitpunkt.
     Alte, häufig benutzte Seiten werden immer wieder entfernt und geladen; mehr
     RAM kann zu mehr faults führen (\emph{Beladys Anomalie})
-  \item[Second chance] Wie FIFO, aber R-bit der letzten Page wird geprüft. R=0:
-    Wurde nicht benutzt $\rightarrow$ weg; R=1: \verb|R := 0|, page an das Ende
-    der LL $\Rightarrow$ entfernt älteste nicht verwendete Page
+  \item[Second chance] Wie FIFO, aber R-bit der letzten Page (erstes LL-Element)
+    wird geprüft. R=0: Wurde nicht benutzt $\rightarrow$ weg; R=1:
+    \verb|R := 0|, page an das Ende der LL $\Rightarrow$ entfernt älteste nicht
+    verwendete Page. Neue Page: \verb|R := 1|
   \item[Clock] Effizientere Implementierung mit circular linked list und next-pointer.
-  \item[LRU] MMU notiert Timestamp bei jedem Zugriff. Sehr gut, aber grosser
+    e
     HW-Aufwand; grössere Page-Einträge.
   \item[NFU] (not frequently used) Pro Page ein counter, periodischer Interrupt
-    inkrementiert counter, ersetze Page mit niedrigstem counter. Alte Pages
+    inkrementiert counter falls benutzt, ersetze Page mit niedrigstem counter. Alte Pages
     (früher oft verwendet) haben aber einen hohen counter selbst wenn sie nicht
     mehr genutzt werden.
   \item[NFU mit aging] counter ist Verlauf: \verb|cnt = (cnt >> 1) + (R << n)|
@@ -374,6 +372,14 @@ ersetzt (zurückschreiben nicht nötig).
     wenn \verb|R = 1| wird $t$ aktualisiert, wenn \verb|R = 0| wird entfernt
     falls $\Delta{}t < T$. Fallback: älteste page.
   \item[WSClock] Circular linked lists mit zusammenhängenden Pages
+\end{description}
+
+\subsection{Adressen}
+
+\begin{description}
+  \item[absolut direkt] ohne Abstraktion, wie Speichercontroller
+  \item[absolut indirekt] virtueller Speicher, Relok., Prozesse schützen
+  \item[relativ direkt] Relokation, Limit-Register
 \end{description}
 
 \section{I/O}
