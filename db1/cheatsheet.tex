@@ -303,7 +303,7 @@ try (Connection conn = DriverManager.getConnection(...) {
 \begin{minted}{java}
 try (Statement stmt = ...) {
   conn.setAutoCommit(false);
-  conn.setTransationIsolation(
+  conn.setTransactionIsolation(
     Connection.TRANSACTION_SERIALIZABLE);
   stmt.addBatch("UPDATE ...");
   int[] rowCount = stmt.executeBatch()
