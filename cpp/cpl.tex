@@ -1,0 +1,53 @@
+\documentclass[a4paper,12pt]{article}
+\usepackage[utf8]{inputenc}
+
+\begin{document}
+\title{C++ Cheatsheet}
+\author{Florian Bruhin}
+\maketitle
+
+\section{Inheritance}
+
+\begin{itemize}
+  \item base class constructor will always be called (either implicitly or explicitly)
+  \item base class ctor gets called before member initialization list
+  \item References don't create a new object.
+  \item Using \verb|=| copies things (but the original might be a reference!)
+  \item Copy constructor does \emph{not} call the parameter-less constructor!
+  \item Copying might do \emph{slicing} if we copy a \verb|Sub| to a static
+    \verb|Base| type (only \verb|Base| members get copied).
+  \item Members with the same \emph{name} (not full signature!) shadow each
+    other.
+  \item ...but you can get other overloads of \verb|foo| via \verb|using Base::foo|.
+  \item When \verb|virtual| is used, we get dynamic dispatch. if \verb|Base| has
+    \verb|virtual|, then \verb|Sub| can omit it.
+  \item Deconstructing: From bottom to top (stack), from \emph{sub} to base!
+\end{itemize}
+
+\section{Includes}
+
+\begin{itemize}
+\item \verb|transform|: \verb|algorithm|
+\item \verb|::tolower|: \verb|cctype|
+\item \verb|ostream_iterator|: \verb|iterator|
+\end{itemize}
+
+\section{Other}
+
+\begin{itemize}
+  \item Insert into set: \verb|std::inserter(s, s.begin())|
+  \item Sorting: ABCDEFGHIJKLMNOPQRSTUVWXYZ \\ abcdefghijklmnopqrstuvwxyz
+  \item Typ von \verb|set<char> const|: \verb|set<char>::const_iterator|
+\end{itemize}
+
+\section{Inheritance issues}
+
+\begin{itemize}
+\item Unneeded \verb|virtual| in subclass
+\item Shadowing of non-virtual methods
+\item Shadowing of virtual methods with different type
+\item Missing \verb|const|
+\item Destructor needs to be \verb|virtual| if heap-allocated
+\end{itemize}
+
+\end{document}
